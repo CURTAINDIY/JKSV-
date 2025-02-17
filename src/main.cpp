@@ -1,5 +1,6 @@
 #include <switch.h>
 #include <curl/curl.h>
+#include <cstdio>
 
 #include "gfx.h"
 #include "file.h"
@@ -39,6 +40,7 @@ extern "C"
 
 int main(int argc, const char *argv[])
 {
+    // Initialize ROMFS, config, file system, graphics, UI theme, and data.
     romfsInit();
     cfg::resetConfig();
     cfg::loadConfig();
@@ -52,31 +54,38 @@ int main(int argc, const char *argv[])
 
     curl_global_init(CURL_GLOBAL_ALL);
     
-    // Drive needs config read
-    if(!util::isApplet())
+    // Initialize remote storage if not in applet mode.
+    if (!util::isApplet())
         fs::remoteInit();
     else
         ui::showMessage(ui::getUICString("appletModeWarning", 0));
         
+    // Main menu loop
     while (true)
     {
         consoleClear();
         printf("Save Manager - Main Menu\n");
         printf("1) Backup/Restore Saves\n");
         printf("2) Convert Save Files (.sav ⇄ .srm)\n");
-        printf("3) Clone Game Save (NSO ⇄ Emulator)\n");
+        printf("3) Sync Game Save (NSO ⇄ Emulator)\n");
         printf("4) Exit\n");
 
         int option;
         scanf("%d", &option);
 
-        if (option == 2)
+        if (option == 1)
+        {
+            // Call your backup/restore menu (replace with your actual function)
+            ui::showBackupRestoreMenu();
+        }
+        else if (option == 2)
         {
             ui::showConvertSaveMenu();
         }
         else if (option == 3)
         {
-            ui::showCloneSaveMenu();
+            // Calls the sync menu that handles NSO ⇄ Emulator save syncing.
+            ui::showSyncSaveMenu();
         }
         else if (option == 4)
         {
@@ -84,9 +93,12 @@ int main(int argc, const char *argv[])
         }
     }
 
+    // Cleanup before exit.
     fs::remoteExit();
     curl_global_cleanup();
     ui::exit();
     data::exit();
     gfx::exit();
+
+    return 0;
 }
