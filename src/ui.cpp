@@ -5,42 +5,44 @@
 #include <vector>
 #include <sys/stat.h>
 #include <switch.h>
+#include <iostream>     // For std::cin, std::cout
+#include <limits>       // For std::numeric_limits
 
 #include "file.h"
 #include "ui.h"
 #include "gfx.h"
 #include "util.h"
 
-//Current menu state
+// Current menu state
 int ui::mstate = USR_SEL, ui::prevState = USR_SEL;
 
 float ui::animScale = 3.0f;
 
-//pad data?
+// Pad data?
 PadState ui::pad;
 HidTouchScreenState ui::touchState;
 
-//Theme id
+// Theme id
 ColorSetId ui::thmID;
 
-//Info printed on folder menu
+// Info printed on folder menu
 std::string ui::folderMenuInfo;
 
-//UI colors
+// UI colors
 SDL_Color ui::clearClr, ui::txtCont, ui::txtDiag, ui::rectLt, ui::rectSh, ui::tboxClr, ui::divClr, ui::slidePanelColor;
 SDL_Color ui::transparent = {0x00, 0x00, 0x00, 0x00};
 
-//textbox pieces
-//I was going to flip them when I draw them, but then laziness kicked in.
+// Textbox pieces
+// I was going to flip them when I draw them, but then laziness kicked in.
 SDL_Texture *ui::cornerTopLeft, *ui::cornerTopRight, *ui::cornerBottomLeft, *ui::cornerBottomRight;
 
-//Progress bar covers + dialog box predrawn
+// Progress bar covers + dialog box predrawn
 SDL_Texture *ui::progCovLeft, *ui::progCovRight, *ui::diaBox;
 
-//Menu box pieces
+// Menu box pieces
 SDL_Texture *ui::mnuTopLeft, *ui::mnuTopRight, *ui::mnuBotLeft, *ui::mnuBotRight;
 
-//Select box + top left icon
+// Select box + top left icon
 SDL_Texture *ui::sideBar;
 
 static SDL_Texture *icn, *corePanel;
@@ -48,13 +50,13 @@ SDL_Color ui::heartColor = {0xFF, 0x44, 0x44, 0xFF};
 
 static int settPos, extPos;
 
-//Vector of pointers to slideOutPanels. Is looped and drawn last so they are always on top
+// Vector of pointers to slideOutPanels. Is looped and drawn last so they are always on top
 std::vector<ui::slideOutPanel *> panels;
 
 static ui::popMessageMngr *popMessages;
 static ui::threadProcMngr *threadMngr;
 
-//8
+// 8
 const std::string ui::loadGlyphArray[] =
 {
     "\ue020", "\ue021", "\ue022", "\ue023",
@@ -86,7 +88,7 @@ void ui::initTheme()
 
         default:
         case ColorSetId_Dark:
-            //jic
+            // Just in case
             thmID = ColorSetId_Dark;
             clearClr = {0x2D, 0x2D, 0x2D, 0xFF};
             txtCont  = {0xFF, 0xFF, 0xFF, 0xFF};
@@ -113,7 +115,7 @@ void ui::init()
     switch(ui::thmID)
     {
         case ColorSetId_Light:
-            //Dark corners
+            // Dark corners
             cornerTopLeft     = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxLght/tboxCornerTopLeft.png");
             cornerTopRight    = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxLght/tboxCornerTopRight.png");
             cornerBottomLeft  = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxLght/tboxCornerBotLeft.png");
@@ -125,7 +127,7 @@ void ui::init()
             break;
 
         default:
-            //Light corners
+            // Light corners
             cornerTopLeft     = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxDrk/tboxCornerTopLeft.png");
             cornerTopRight    = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxDrk/tboxCornerTopRight.png");
             cornerBottomLeft  = gfx::texMgr->textureLoadFromFile("romfs:/img/tboxDrk/tboxCornerBotLeft.png");
@@ -150,7 +152,7 @@ void ui::init()
     popMessages = new ui::popMessageMngr;
     threadMngr  = new ui::threadProcMngr;
 
-    //Need these from user/main menu
+    // Need these from user/main menu
     settPos = ui::usrMenu->getOptPos(ui::getUICString("mainMenuSettings", 0));
     extPos  = ui::usrMenu->getOptPos(ui::getUICString("mainMenuExtras", 0));
 }
@@ -202,12 +204,12 @@ void ui::drawUI()
     else
         gfx::drawTextf(NULL, 24, 130, 38, &ui::txtCont, "JKSV");
 
-    //Version / translation author
+    // Version / translation author
     gfx::drawTextf(NULL, 12, 8, 700, &ui::txtCont, "v. %02d.%02d.%04d", BLD_MON, BLD_DAY, BLD_YEAR);
     if(ui::getUIString("author", 0) != "NULL")
         gfx::drawTextf(NULL, 12, 8, 682, &ui::txtCont, "%s%s", ui::getUICString("translationMainPage", 0), ui::getUICString("author", 0));
 
-    //This only draws the help text now and only does when user select is open
+    // This only draws the help text now and only does when user select is open
     ui::usrDraw(NULL);
 
     if((ui::usrMenu->getActive() && ui::usrMenu->getSelected() == settPos) || ui::mstate == OPT_MNU)
@@ -304,5 +306,54 @@ void ui::toTTL(void *a)
     {
         data::user *u = data::getCurrentUser();
         ui::showPopMessage(POP_FRAME_DEFAULT, ui::getUICString("saveDataNoneFound", 0), u->getUsername().c_str());
+    }
+}
+
+// -----------------------------------------------------------------------------
+// New: Sync Game Save Menu
+// Allows the user to sync an independent emulator save file (from 
+// sdmc:/roms/<platform>/<game name>.sav) with the NSO save file 
+// (located at sdmc:/switch/JKSV/Saves/NSO/<game name>/<game name>.srm),
+// in either direction.
+// -----------------------------------------------------------------------------
+void ui::showSyncSaveMenu()
+{
+    // Using standard console I/O for this sync menu
+    while (true)
+    {
+        std::cout << "\n=== Sync Game Save ===\n";
+        std::cout << "1) Sync from NSO → Emulator\n";
+        std::cout << "2) Sync from Emulator → NSO\n";
+        std::cout << "3) Back\n";
+        std::cout << "Select an option: ";
+
+        int choice;
+        std::cin >> choice;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        if (choice == 3)
+            break;
+
+        std::string gameName;
+        std::string platform;
+        std::cout << "Enter the game name (without extension): ";
+        std::getline(std::cin, gameName);
+        std::cout << "Enter the platform name (e.g., gb, n64, etc.): ";
+        std::getline(std::cin, platform);
+
+        if (choice == 1)
+        {
+            // Sync from NSO to Emulator
+            file::syncNSOtoEmulator(platform, gameName);
+        }
+        else if (choice == 2)
+        {
+            // Sync from Emulator to NSO
+            file::syncEmulatorToNSO(platform, gameName);
+        }
+        else
+        {
+            std::cout << "Invalid option.\n";
+        }
     }
 }
