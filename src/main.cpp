@@ -51,13 +51,38 @@ int main(int argc, const char *argv[])
     romfsExit();
 
     curl_global_init(CURL_GLOBAL_ALL);
-    //Drive needs config read
+    
+    // Drive needs config read
     if(!util::isApplet())
         fs::remoteInit();
     else
         ui::showMessage(ui::getUICString("appletModeWarning", 0));
         
-    while(ui::runApp()){ }
+    while (true)
+    {
+        consoleClear();
+        printf("Save Manager - Main Menu\n");
+        printf("1) Backup/Restore Saves\n");
+        printf("2) Convert Save Files (.sav ⇄ .srm)\n");
+        printf("3) Clone Game Save (NSO ⇄ Emulator)\n");
+        printf("4) Exit\n");
+
+        int option;
+        scanf("%d", &option);
+
+        if (option == 2)
+        {
+            ui::showConvertSaveMenu();
+        }
+        else if (option == 3)
+        {
+            ui::showCloneSaveMenu();
+        }
+        else if (option == 4)
+        {
+            break;
+        }
+    }
 
     fs::remoteExit();
     curl_global_cleanup();
