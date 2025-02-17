@@ -32,16 +32,16 @@ enum menuState
 
 namespace ui
 {
-    //Current menu/ui state
+    // Current menu/ui state
     extern int mstate, prevState;
 
-    //Slide/animation scaling
+    // Slide/animation scaling
     extern float animScale;
 
-    //Loading glyph
+    // Loading glyph
     extern const std::string loadGlyphArray[];
 
-    //pad data cause i don't know where else to put it
+    // Pad data - placed here for convenience
     extern PadState pad;
     extern HidTouchScreenState touchState;
     static inline void updateInput() { touchState = {0}; padUpdate(&pad); hidGetTouchScreenStates(&touchState, 1); }
@@ -55,56 +55,62 @@ namespace ui
         mstate = newState;
     }
 
-    //Holds theme set id
+    // Holds theme set id
     extern ColorSetId thmID;
 
-    //Both UI modes need access to this
+    // Both UI modes need access to this
     extern std::string folderMenuInfo;
 
-    /*Colors
-        clearClr = color to clear buffer
-        txtCont = text that contrasts clearClr
-        txtDiag = text color for dialogs
+    /* Colors:
+         clearClr  = color to clear buffer
+         txtCont   = text that contrasts clearClr
+         txtDiag   = text color for dialogs
     */
     extern SDL_Color clearClr, transparent, txtCont, txtDiag, rectLt, rectSh, tboxClr, sideRect, divClr, heartColor, slidePanelColor;
 
-    //Textbox graphics
+    // Textbox graphics
     extern SDL_Texture *cornerTopLeft, *cornerTopRight, *cornerBottomLeft, *cornerBottomRight;
-    //Menu bounding
+    // Menu bounding textures
     extern SDL_Texture *mnuTopLeft, *mnuTopRight, *mnuBotLeft, *mnuBotRight;
 
-    //Covers left and right of progress bar to fake being not a rectangle.
+    // Covers for progress bar
     extern SDL_Texture *progCovLeft, *progCovRight, *diaBox;
 
-    //Side bar from Freebird. RIP.
+    // Side bar texture
     extern SDL_Texture *sideBar;
 
-    //Sets colors and loads font for icon creation
+    // Sets colors and loads font for icon creation
     void initTheme();
 
-    //Loads graphics and stuff
+    // Loads graphics and other assets
     void init();
     void exit();
 
-    //Inits HID
+    // Inits HID (input)
     void hidInit();
 
-    //Adds a panel pointer to a vector since they need to be drawn over everything else
+    // Adds a panel pointer to a vector (for drawing order)
     int registerMenu(ui::menu *m);
     int registerPanel(ui::slideOutPanel *sop);
     threadInfo *newThread(ThreadFunc func, void *args, funcPtr _drawFunc);
 
-    //Just draws a screen and flips JIC boot takes long.
+    // Displays the load screen
     void showLoadScreen();
 
-    //Clears and draws general stuff used by multiple screens
+    // Draws the UI elements
     void drawUI();
 
-    //switch case so we don't have problems with multiple main loops like 3DS
+    // Main application loop
     bool runApp();
 
+    // Displays a pop-up message
     void showPopMessage(int frameCount, const char *fmt, ...);
 
-    //Used for multiple menu functions/callback
+    // Callback used by various menu functions
     void toTTL(void *);
+
+    // -------------------------------------------------------------------------
+    // NEW: Sync Save Menu Function Declaration
+    // Displays a menu to sync NSO and Emulator saves.
+    void showSyncSaveMenu();
 }
