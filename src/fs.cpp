@@ -1,23 +1,29 @@
 #include <switch.h>
 #include <string>
+#include <vector>
+#include <cstdarg>
+#include <cstdio>
 
 #include "fs.h"
 #include "cfg.h"
 #include "util.h"
 
+// Base working directory for JKSV
 static std::string wd = "sdmc:/JKSV/";
 
+// New constants for NSO and Emulator save directories
+static const std::string NSO_SAVE_BASE = "sdmc:/switch/JKSV/Saves/NSO/";
+static const std::string EMULATOR_BASE   = "sdmc:/roms/";
+
 static FSFILE *debLog;
-
 static FsFileSystem sv;
-
 static std::vector<std::string> pathFilter;
 
 void fs::init()
 {
     mkDirRec("sdmc:/config/JKSV/");
     mkDirRec(wd);
-    mkdir(std::string(wd + "_TRASH_").c_str(), 777);
+    mkdir((wd + "_TRASH_").c_str(), 777);
 
     fs::logOpen();
 }
@@ -104,9 +110,7 @@ bool fs::commitToDevice(const std::string& dev)
 }
 
 std::string fs::getWorkDir() { return wd; }
-
 void fs::setWorkDir(const std::string& _w) { wd = _w; }
-
 
 void fs::loadPathFilters(const uint64_t& tid)
 {
@@ -350,7 +354,6 @@ uint64_t fs::getJournalSizeMax(const data::userTitleInfo *tinfo)
             break;
 
         default:
-            //will just fail
             ret = 0;
             break;
     }
@@ -418,12 +421,11 @@ void fs::createNewBackup(void *a)
         std::string path = util::generatePathByTID(d->tid) + out;
         if(cfg::config["zip"] || ext == "zip")
         {
-            if(ext != "zip")//data::zip is on but extension is not zip
+            if(ext != "zip")
                 path += ".zip";
 
             zipFile zip = zipOpen64(path.c_str(), 0);
             fs::copyDirToZipThreaded("sv:/", zip, false, 0);
-
         }
         else
         {
@@ -668,3 +670,94 @@ void fs::logWrite(const char *fmt, ...)
     fsfclose(debLog);
 }
 
+// -----------------------------------------------------------------------------
+// New Sync Functions
+// These functions perform the file copy operations needed to sync
+// NSO saves with emulator saves and vice versa.
+// -----------------------------------------------------------------------------
+
+bool fs::syncNSOtoEmulator(const std::string &gameName, const std::string &platform)
+{
+    // Construct source and destination paths:
+    // NSO save: sdmc:/switch/JKSV/Saves/NSO/<gameName>/cartridge.sram
+    // Emulator save: sdmc:/roms/<platform>/<gameName>.sav
+    std::string nsoSave = NSO_SAVE_BASE + gameName + "/cartridge.sram";
+    std::string emulatorSave = EMULATOR_BASE + platform + "/" + gameName + ".sav";
+
+    if(!fs::fileExists(nsoSave))
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "NSO save file not found: %s", nsoSave.c_str());
+        return false;
+    }
+
+    FSFILE *src = fsfopen(nsoSave.c_str(), FsOpenMode_Read);
+    if(!src)
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "Failed to open NSO save file.");
+        return false;
+    }
+
+    FSFILE *dest = fsfopen(emulatorSave.c_str(), FsOpenMode_Write);
+    if(!dest)
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "Failed to open emulator save file for writing.");
+        fsfclose(src);
+        return false;
+    }
+
+    const int BUFFER_SIZE = 4096;
+    char buffer[BUFFER_SIZE];
+    size_t bytesRead = 0;
+    while((bytesRead = fsfread(buffer, 1, BUFFER_SIZE, src)) > 0)
+    {
+        fsfwrite(buffer, 1, bytesRead, dest);
+    }
+    fsfclose(src);
+    fsfclose(dest);
+
+    ui::showPopMessage(POP_FRAME_DEFAULT, "Synced NSO to Emulator successfully.");
+    return true;
+}
+
+bool fs::syncEmulatorToNSO(const std::string &gameName, const std::string &platform)
+{
+    // Construct source and destination paths:
+    // Emulator save: sdmc:/roms/<platform>/<gameName>.sav
+    // NSO save: sdmc:/switch/JKSV/Saves/NSO/<gameName>/cartridge.sram
+    std::string emulatorSave = EMULATOR_BASE + platform + "/" + gameName + ".sav";
+    std::string nsoSave = NSO_SAVE_BASE + gameName + "/cartridge.sram";
+
+    if(!fs::fileExists(emulatorSave))
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "Emulator save file not found: %s", emulatorSave.c_str());
+        return false;
+    }
+
+    FSFILE *src = fsfopen(emulatorSave.c_str(), FsOpenMode_Read);
+    if(!src)
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "Failed to open emulator save file.");
+        return false;
+    }
+
+    FSFILE *dest = fsfopen(nsoSave.c_str(), FsOpenMode_Write);
+    if(!dest)
+    {
+        ui::showPopMessage(POP_FRAME_DEFAULT, "Failed to open NSO save file for writing.");
+        fsfclose(src);
+        return false;
+    }
+
+    const int BUFFER_SIZE = 4096;
+    char buffer[BUFFER_SIZE];
+    size_t bytesRead = 0;
+    while((bytesRead = fsfread(buffer, 1, BUFFER_SIZE, src)) > 0)
+    {
+        fsfwrite(buffer, 1, bytesRead, dest);
+    }
+    fsfclose(src);
+    fsfclose(dest);
+
+    ui::showPopMessage(POP_FRAME_DEFAULT, "Synced Emulator to NSO successfully.");
+    return true;
+}
