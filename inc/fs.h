@@ -2,7 +2,6 @@
 
 #include <minizip/zip.h>
 #include <minizip/unzip.h>
-
 #include "fs/fstype.h"
 #include "fs/file.h"
 #include "fs/dir.h"
@@ -17,6 +16,8 @@
 
 namespace fs
 {
+    // Existing function declarations...
+
     copyArgs *copyArgsCreate(const std::string& src, const std::string& dst, const std::string& dev, zipFile z, unzFile unz, bool _cleanup, bool _trimZipPath, uint8_t _trimPlaces);
     void copyArgsDestroy(copyArgs *c);
 
@@ -27,7 +28,7 @@ namespace fs
     std::string getWorkDir();
     void setWorkDir(const std::string& _w);
 
-    //Loads paths to filter from backup/deletion
+    // Loads paths to filter from backup/deletion
     void loadPathFilters(const uint64_t& tid);
     bool pathIsFiltered(const std::string& _path);
     void freePathFilters();
@@ -39,7 +40,7 @@ namespace fs
     uint64_t getJournalSize(const data::userTitleInfo *tinfo);
     uint64_t getJournalSizeMax(const data::userTitleInfo *tinfo);
 
-    //Always threaded
+    // Always threaded operations
     void wipeSave();
 
     void createNewBackup(void *a);
@@ -52,4 +53,15 @@ namespace fs
 
     void logOpen();
     void logWrite(const char *fmt, ...);
+
+    // -------------------------------------------------------------------------
+    // New Sync Function Declarations:
+    // -------------------------------------------------------------------------
+    // Sync an NSO save (from sdmc:/switch/JKSV/Saves/NSO/<gameName>/cartridge.sram)
+    // to an emulator save (sdmc:/roms/<platform>/<gameName>.sav).
+    bool syncNSOtoEmulator(const std::string &gameName, const std::string &platform);
+
+    // Sync an emulator save (sdmc:/roms/<platform>/<gameName>.sav)
+    // to an NSO save (sdmc:/switch/JKSV/Saves/NSO/<gameName>/cartridge.sram).
+    bool syncEmulatorToNSO(const std::string &gameName, const std::string &platform);
 }
