@@ -18,8 +18,10 @@ uint8_t cfg::sortType;
 std::string cfg::driveClientID, cfg::driveClientSecret, cfg::driveRefreshToken;
 std::string cfg::webdavOrigin, cfg::webdavBasePath, cfg::webdavUser, cfg::webdavPassword;
 
+const char *cfgPath = "sdmc:/config/JKSV/JKSV.cfg", 
+           *titleDefPath = "sdmc:/config/JKSV/titleDefs.txt", 
+           *workDirLegacy = "sdmc:/switch/jksv_dir.txt";
 
-const char *cfgPath = "sdmc:/config/JKSV/JKSV.cfg", *titleDefPath = "sdmc:/config/JKSV/titleDefs.txt", *workDirLegacy = "sdmc:/switch/jksv_dir.txt";
 static std::unordered_map<std::string, unsigned> cfgStrings =
 {
     {"workDir", 0}, {"includeDeviceSaves", 1}, {"autoBackup", 2}, {"overclock", 3}, {"holdToDelete", 4}, {"holdToRestore", 5},
@@ -38,7 +40,7 @@ bool cfg::isBlacklisted(const uint64_t& tid)
     return false;
 }
 
-//Has to be threaded to be compatible with ui::confirm
+// Has to be threaded to be compatible with ui::confirm
 void cfg::addTitleToBlacklist(void *a)
 {
     threadInfo *t = (threadInfo *)a;
@@ -283,7 +285,7 @@ static void loadTitleDefsLegacy()
     }
 }
 
-//Oops
+// Oops
 static void loadTitleDefs()
 {
     if(fs::fileExists(titleDefPath))
